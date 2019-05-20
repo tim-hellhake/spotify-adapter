@@ -9,5 +9,6 @@
 Control your spotify player.
 
 ## Configuration
-1. Create an access token with the permission `user-modify-playback-state`
-2. Add access token to the settings
+1. Go to https://developer.spotify.com/console/post-next
+2. Create an access token with the permission `user-modify-playback-state`
+3. Add access token to the settings
