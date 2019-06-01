@@ -14,17 +14,17 @@ const {
 } = require('gateway-addon');
 
 class SpotifyDevice extends Device {
-  constructor(adapter, config) {
-    super(adapter, SpotifyDevice.name);
+  constructor(adapter, manifest) {
+    super(adapter, manifest.display_name);
     this['@context'] = 'https://iot.mozilla.org/schemas/';
-    this.name = 'Spotify';
-    this.description = 'Controls your spotify player';
-    this.config = config;
+    this.name = manifest.display_name;
+    this.description = manifest.description;
+    this.config = manifest.moziot.config;
     this.spotifyActions = {};
     const spotifyApi = new SpotifyWebApi();
-    spotifyApi.setAccessToken(config.accessToken);
+    spotifyApi.setAccessToken(this.config.accessToken);
 
-    if (!config.accessToken) {
+    if (!this.config.accessToken) {
       console.warn('No access token set');
     }
 
@@ -64,7 +64,7 @@ class SpotifyAdapter extends Adapter {
   constructor(addonManager, manifest) {
     super(addonManager, SpotifyAdapter.name, manifest.name);
     addonManager.addAdapter(this);
-    const device = new SpotifyDevice(this, manifest.moziot.config);
+    const device = new SpotifyDevice(this, manifest);
     this.handleDeviceAdded(device);
   }
 }
