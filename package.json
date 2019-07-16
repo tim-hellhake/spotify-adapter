@@ -35,12 +35,21 @@
     "schema": {
       "type": "object",
       "required": [
-        "accessToken"
+        "accessToken",
+        "interval"
       ],
       "properties": {
         "accessToken": {
           "type": "string",
           "title": "The spotify access token"
+        },
+        "deviceID": {
+          "type": "string",
+          "title": "An optional Spotify Device ID"
+        },
+        "interval": {
+          "type": "number",
+          "title": "Number of seconds for polling the current playback state"
         }
       }
     }
