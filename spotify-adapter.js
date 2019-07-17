@@ -11,8 +11,10 @@ const SpotifyWebApi = require('spotify-web-api-node');
 const {
   Adapter,
   Device,
+  Database,
   Property
 } = require('gateway-addon');
+const request = require('request');
 
 
 class SpotifyProperty extends Property {
@@ -28,7 +30,8 @@ class SpotifyProperty extends Property {
 
   setValue(value) {
     return new Promise((resolve, reject) => {
-      this.setValueCb(value)
+      console.log(`Setting ${this.name} to ${value}`);
+      this.setValueHandler(value)
         .then((updatedValue) => {
           this.setCachedValue(updatedValue);
           resolve(updatedValue);
@@ -50,11 +53,108 @@ class SpotifyDevice extends Device {
     this.config = manifest.moziot.config;
     this.spotifyActions = {};
     this.spotifyApi = new SpotifyWebApi();
+	
+    const db = new Database(manifest.name);
+    db.open()
+      .then(async () => {
 
-    if (!this.config.accessToken) {
-      console.warn('No access token set');
-    }
-    this.spotifyApi.setAccessToken(this.config.accessToken);
+        const config = await db.loadConfig();
+        if (config.clientID) {
+          this.spotifyApi.setCredentials({
+            clientId: config.clientID,
+            clientSecret: config.clientSecret,
+            redirectUri: config.redirectURI || 'https://ppacher.at/callback'
+          });
+
+          if (config.accessToken) {
+            config.url = "";
+            db.saveConfig(config);
+
+            if (config.authorized) {
+                console.log(`Refresh-Token: ${this.refreshToken}`);
+                this.spotifyApi.setAccessToken(config.accessToken);
+                this.spotifyApi.setRefreshToken(config.refreshToken);
+
+                if (this.spotifyApi.refreshToken) {
+                        this.spotifyApi.refreshAccessToken()
+                            .then(data => {
+                              console.log(`Refreshed access token. Expires in ${data.body.expires_in}`);
+
+                              this.spotifyApi.setAccessToken(data.body.access_token);
+                              config.accessToken = data.body.access_token;
+                              if (data.body.refresh_token) {
+                                console.log(`Refreshed refresh token`);
+                                this.spotifyApi.setRefreshToken(data.body.refresh_token);
+                                config.refreshToken = data.body.refresh_token;
+                              }
+
+                              db.saveConfig(config);
+                              this.updateState();
+                            })
+                            .catch(err => console.error(err));
+                 } else {
+                   console.log(`No refresh token available`);
+                 }
+
+            } else {
+              request.post({
+                url: "https://accounts.spotify.com/api/token",
+                method: "POST",
+                form: {
+                  grant_type: 'authorization_code',
+                  code: config.accessToken,
+                  redirect_uri: this.config.redirectURI || 'https://ppacher.at/callback',
+                  client_id: this.config.clientID,
+                  client_secret: this.config.clientSecret,
+                }
+              }, (err, response, body) => {
+                if (err) {
+                  console.error(err);
+                  return;
+                }
+                if (response.statusCode !== 200) {
+                  console.error(body);
+                  return;
+                }
+
+                const data = JSON.parse(body);
+
+                config.accessToken  = data.access_token;
+                config.refreshToken = data.refresh_token;
+                config.authorized = true;
+
+                console.log(config);
+
+                db.saveConfig(config);
+
+                this.spotifyApi.setAccessToken(data['access_token']);
+                this.spotifyApi.setRefreshToken(data['refresh_token']);
+
+                this.updateState();
+              })
+
+            }
+          }
+
+          if (!config.accessToken) {
+            // we don't have an access/refresh token yet. Create a new authorization URL,
+            // place it in the authorizationCode field and wait for the user
+            // to follow the instructions
+            const scopes = [ 'user-read-playback-state', 'user-modify-playback-state' ];
+            const url = this.spotifyApi.createAuthorizeURL(scopes, "");
+
+            config.url = url;
+            config.authorized = false;
+            config.refreshToken = '';
+
+            db.saveConfig(config);
+          }
+        } else {
+          if (this.config.accessToken) {
+            this.spotifyApi.setAccessToken(this.config.accessToken);
+          }
+        }
+      });
 
     this.callOpts = {};
     if (this.config.deviceID) {
@@ -62,7 +162,9 @@ class SpotifyDevice extends Device {
     }
 
     this.initStateProperty();
+    this.initAlbumCoverProperty();
     this.initActions();
+
   }
 
   schedulePolling() {
@@ -83,10 +185,14 @@ class SpotifyDevice extends Device {
           } else {
             this.state.updateValue(response.body.is_playing);
           }
+
+	  if (response.body.item && response.body.item.album && response.body.item.album.images) {
+	     this.cover.updateValue(response.body.item.album.images[0].url);
+          }
         }
 
         this.schedulePolling();
-      });
+      }).catch(err => console.error(err));
   }
 
   initStateProperty() {
@@ -105,6 +211,16 @@ class SpotifyDevice extends Device {
     });
 
     this.properties.set('state', this.state);
+  }
+
+  initAlbumCoverProperty() {
+    this.cover = new SpotifyProperty(this, 'albumCover', (value) => Promise.reject('readOnly'), {
+      title: 'albumCover',
+      type: 'string',
+      readOnly: true,
+    });
+
+    this.properties.set('albumCover', this.cover);
   }
 
   initActions() {
@@ -161,6 +277,7 @@ class SpotifyDevice extends Device {
 class SpotifyAdapter extends Adapter {
   constructor(addonManager, manifest) {
     super(addonManager, SpotifyAdapter.name, manifest.name);
+
     addonManager.addAdapter(this);
     const device = new SpotifyDevice(this, manifest);
     this.handleDeviceAdded(device);
