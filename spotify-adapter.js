@@ -37,6 +37,14 @@ class SpotifyDevice extends Device {
       title: 'next',
       description: 'Skip to the next track',
     }, () => spotifyApi.skipToNext());
+
+    this.links = [
+      {
+        rel: 'alternate',
+        mediaType: 'text/html',
+        href: 'https://open.spotify.com',
+      },
+    ];
   }
 
   addSpotifyAction(name, description, apiCall) {
