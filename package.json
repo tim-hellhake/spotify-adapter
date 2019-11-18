@@ -21,6 +21,7 @@
   "files": [
     "LICENSE",
     "SHA256SUMS",
+    "manifest.json",
     "index.js",
     "spotify-adapter.js"
   ],

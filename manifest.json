@@ -1,0 +1,33 @@
+{
+  "manifest_version": 1,
+  "id": "spotify-adapter",
+  "name": "Spotify",
+  "short_name": "Spotify",
+  "version": "0.1.2",
+  "description": "Control your spotify player",
+  "homepage_url": "https://github.com/tim-hellhake/spotify-adapter#readme",
+  "license": "MPL-2.0",
+  "author": "Tim Hellhake",
+  "gateway_specific_settings": {
+    "webthings": {
+      "exec": "{nodeLoader} {path}",
+      "strict_min_version": "0.10.0",
+      "strict_max_version": "*",
+      "primary_type": "adapter"
+    }
+  },
+  "options": {
+    "schema": {
+      "type": "object",
+      "required": [
+        "accessToken"
+      ],
+      "properties": {
+        "accessToken": {
+          "type": "string",
+          "title": "The spotify access token"
+        }
+      }
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 npm install --production
 
-shasum --algorithm 256 package.json *.js LICENSE > SHA256SUMS
+shasum --algorithm 256 package.json manifest.json *.js LICENSE README.md > SHA256SUMS
 find node_modules -type f -exec shasum --algorithm 256 {} \; >> SHA256SUMS
 
 TARFILE=`npm pack`
