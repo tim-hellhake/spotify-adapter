@@ -59,17 +59,17 @@
           "type": "string",
           "title": "Open URL to authenticate"
         },
-	"redirectURI": {
-	  "type": "string",
-	  "title": "Redirect URL",
-	  "description": "This URL must match the one configured in your Spotify Application"
-	},
-	"authorized": {
-	  "type": "boolean",
-	  "title": "Authorization status",
-	  "description": "Will be enabled once Spotify authorization completes",
-	  "readOnly": true
-	},
+        "redirectURI": {
+          "type": "string",
+          "title": "Redirect URL",
+          "description": "This URL must match the one configured in your Spotify Application"
+        },
+        "authorized": {
+          "type": "boolean",
+          "title": "Authorization status",
+          "description": "Will be enabled once Spotify authorization completes",
+          "readOnly": true
+        },
         "deviceID": {
           "type": "string",
           "title": "An optional Spotify Device ID"
@@ -82,11 +82,11 @@
     }
   },
   "dependencies": {
-    "request": "^2.88.0",
+    "request": "^2.88.2",
     "spotify-web-api-node": "^4.0.0"
   },
   "devDependencies": {
-    "babel-eslint": "^10.0.3",
-    "eslint": "^6.2.2"
+    "babel-eslint": "^10.1.0",
+    "eslint": "^6.8.0"
   }
 }
