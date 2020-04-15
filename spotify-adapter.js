@@ -48,12 +48,12 @@ class SpotifyDevice extends Device {
 
     this['@context'] = 'https://iot.mozilla.org/schemas/';
     this.title = manifest.display_name;
-    this['@type'] = manifest['@type'] || [ 'OnOffSwitch' ];
+    this['@type'] = manifest['@type'] || ['OnOffSwitch'];
     this.description = manifest.description;
     this.config = manifest.moziot.config;
     this.spotifyActions = {};
     this.spotifyApi = new SpotifyWebApi();
-	
+
     const db = new Database(manifest.name);
     db.open()
       .then(async () => {
@@ -71,30 +71,30 @@ class SpotifyDevice extends Device {
             db.saveConfig(config);
 
             if (config.authorized) {
-                console.log(`Refresh-Token: ${this.refreshToken}`);
-                this.spotifyApi.setAccessToken(config.accessToken);
-                this.spotifyApi.setRefreshToken(config.refreshToken);
+              console.log(`Refresh-Token: ${this.refreshToken}`);
+              this.spotifyApi.setAccessToken(config.accessToken);
+              this.spotifyApi.setRefreshToken(config.refreshToken);
 
-                if (this.spotifyApi.refreshToken) {
-                        this.spotifyApi.refreshAccessToken()
-                            .then(data => {
-                              console.log(`Refreshed access token. Expires in ${data.body.expires_in}`);
+              if (this.spotifyApi.refreshToken) {
+                this.spotifyApi.refreshAccessToken()
+                  .then(data => {
+                    console.log(`Refreshed access token. Expires in ${data.body.expires_in}`);
 
-                              this.spotifyApi.setAccessToken(data.body.access_token);
-                              config.accessToken = data.body.access_token;
-                              if (data.body.refresh_token) {
-                                console.log(`Refreshed refresh token`);
-                                this.spotifyApi.setRefreshToken(data.body.refresh_token);
-                                config.refreshToken = data.body.refresh_token;
-                              }
+                    this.spotifyApi.setAccessToken(data.body.access_token);
+                    config.accessToken = data.body.access_token;
+                    if (data.body.refresh_token) {
+                      console.log(`Refreshed refresh token`);
+                      this.spotifyApi.setRefreshToken(data.body.refresh_token);
+                      config.refreshToken = data.body.refresh_token;
+                    }
 
-                              db.saveConfig(config);
-                              this.updateState();
-                            })
-                            .catch(err => console.error(err));
-                 } else {
-                   console.log(`No refresh token available`);
-                 }
+                    db.saveConfig(config);
+                    this.updateState();
+                  })
+                  .catch(err => console.error(err));
+              } else {
+                console.log(`No refresh token available`);
+              }
 
             } else {
               request.post({
@@ -119,7 +119,7 @@ class SpotifyDevice extends Device {
 
                 const data = JSON.parse(body);
 
-                config.accessToken  = data.access_token;
+                config.accessToken = data.access_token;
                 config.refreshToken = data.refresh_token;
                 config.authorized = true;
 
@@ -140,7 +140,7 @@ class SpotifyDevice extends Device {
             // we don't have an access/refresh token yet. Create a new authorization URL,
             // place it in the authorizationCode field and wait for the user
             // to follow the instructions
-            const scopes = [ 'user-read-playback-state', 'user-modify-playback-state' ];
+            const scopes = ['user-read-playback-state', 'user-modify-playback-state'];
             const url = this.spotifyApi.createAuthorizeURL(scopes, "");
 
             config.url = url;
@@ -181,13 +181,13 @@ class SpotifyDevice extends Device {
           if (this.config.deviceID) {
             // eslint-disable-next-line max-len
             this.state.updateValue(response.body.device.id === this.config.deviceID &&
-                                   response.body.is_playing);
+              response.body.is_playing);
           } else {
             this.state.updateValue(response.body.is_playing);
           }
 
-	  if (response.body.item && response.body.item.album && response.body.item.album.images) {
-	     this.cover.updateValue(response.body.item.album.images[0].url);
+          if (response.body.item && response.body.item.album && response.body.item.album.images) {
+            this.cover.updateValue(response.body.item.album.images[0].url);
           }
         }
 
