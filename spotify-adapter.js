@@ -74,7 +74,7 @@ class SpotifyDevice extends Device {
               this.spotifyApi.setAccessToken(config.accessToken);
               this.spotifyApi.setRefreshToken(config.refreshToken);
 
-              if (this.spotifyApi.refreshToken) {
+              if (this.spotifyApi.getRefreshToken()) {
                 this.spotifyApi.refreshAccessToken()
                   .then((data) => {
                     // eslint-disable-next-line max-len
