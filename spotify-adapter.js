@@ -57,7 +57,6 @@ class SpotifyDevice extends Device {
     const db = new Database(manifest.name);
     db.open()
       .then(async () => {
-
         const config = await db.loadConfig();
         if (config.clientID) {
           this.spotifyApi.setCredentials({
@@ -67,7 +66,7 @@ class SpotifyDevice extends Device {
           });
 
           if (config.accessToken) {
-            config.url = "";
+            config.url = '';
             db.saveConfig(config);
 
             if (config.authorized) {
@@ -77,7 +76,8 @@ class SpotifyDevice extends Device {
 
               if (this.spotifyApi.refreshToken) {
                 this.spotifyApi.refreshAccessToken()
-                  .then(data => {
+                  .then((data) => {
+                    // eslint-disable-next-line max-len
                     console.log(`Refreshed access token. Expires in ${data.body.expires_in}`);
 
                     this.spotifyApi.setAccessToken(data.body.access_token);
@@ -91,18 +91,18 @@ class SpotifyDevice extends Device {
                     db.saveConfig(config);
                     this.updateState();
                   })
-                  .catch(err => console.error(err));
+                  .catch((err) => console.error(err));
               } else {
                 console.log(`No refresh token available`);
               }
-
             } else {
               request.post({
-                url: "https://accounts.spotify.com/api/token",
-                method: "POST",
+                url: 'https://accounts.spotify.com/api/token',
+                method: 'POST',
                 form: {
                   grant_type: 'authorization_code',
                   code: config.accessToken,
+                  // eslint-disable-next-line max-len
                   redirect_uri: this.config.redirectURI || 'https://ppacher.at/callback',
                   client_id: this.config.clientID,
                   client_secret: this.config.clientSecret,
@@ -127,21 +127,22 @@ class SpotifyDevice extends Device {
 
                 db.saveConfig(config);
 
-                this.spotifyApi.setAccessToken(data['access_token']);
-                this.spotifyApi.setRefreshToken(data['refresh_token']);
+                this.spotifyApi.setAccessToken(data.access_token);
+                this.spotifyApi.setRefreshToken(data.refresh_token);
 
                 this.updateState();
-              })
-
+              });
             }
           }
 
           if (!config.accessToken) {
+            // eslint-disable-next-line max-len
             // we don't have an access/refresh token yet. Create a new authorization URL,
             // place it in the authorizationCode field and wait for the user
             // to follow the instructions
+            // eslint-disable-next-line max-len
             const scopes = ['user-read-playback-state', 'user-modify-playback-state'];
-            const url = this.spotifyApi.createAuthorizeURL(scopes, "");
+            const url = this.spotifyApi.createAuthorizeURL(scopes, '');
 
             config.url = url;
             config.authorized = false;
@@ -149,10 +150,8 @@ class SpotifyDevice extends Device {
 
             db.saveConfig(config);
           }
-        } else {
-          if (this.config.accessToken) {
-            this.spotifyApi.setAccessToken(this.config.accessToken);
-          }
+        } else if (this.config.accessToken) {
+          this.spotifyApi.setAccessToken(this.config.accessToken);
         }
       });
 
@@ -164,7 +163,6 @@ class SpotifyDevice extends Device {
     this.initStateProperty();
     this.initAlbumCoverProperty();
     this.initActions();
-
   }
 
   schedulePolling() {
@@ -186,13 +184,14 @@ class SpotifyDevice extends Device {
             this.state.updateValue(response.body.is_playing);
           }
 
+          // eslint-disable-next-line max-len
           if (response.body.item && response.body.item.album && response.body.item.album.images) {
             this.cover.updateValue(response.body.item.album.images[0].url);
           }
         }
 
         this.schedulePolling();
-      }).catch(err => console.error(err));
+      }).catch((err) => console.error(err));
   }
 
   initStateProperty() {
@@ -214,7 +213,8 @@ class SpotifyDevice extends Device {
   }
 
   initAlbumCoverProperty() {
-    this.cover = new SpotifyProperty(this, 'albumCover', (value) => Promise.reject('readOnly'), {
+    // eslint-disable-next-line max-len
+    this.cover = new SpotifyProperty(this, 'albumCover', () => Promise.reject('readOnly'), {
       title: 'albumCover',
       type: 'string',
       readOnly: true,
