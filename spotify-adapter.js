@@ -204,7 +204,7 @@ class SpotifyDevice extends Device {
       return this.spotifyApi.pause(this.callOpts)
         .then(() => value);
     }, {
-      title: 'state',
+      title: 'State',
       '@type': 'OnOffProperty',
       type: 'boolean',
     });
@@ -215,7 +215,7 @@ class SpotifyDevice extends Device {
   initAlbumCoverProperty() {
     // eslint-disable-next-line max-len
     this.cover = new SpotifyProperty(this, 'albumCover', () => Promise.reject('readOnly'), {
-      title: 'albumCover',
+      title: 'Album Cover',
       type: 'string',
       readOnly: true,
     });
@@ -225,12 +225,12 @@ class SpotifyDevice extends Device {
 
   initActions() {
     this.addSpotifyAction('previous', {
-      title: 'previous',
+      title: 'Previous',
       description: 'Skip to the previous track',
     }, () => this.spotifyApi.skipToPrevious(this.callOpts));
 
     this.addSpotifyAction('next', {
-      title: 'next',
+      title: 'Next',
       description: 'Skip to the next track',
     }, () => this.spotifyApi.skipToNext(this.callOpts));
 
@@ -243,12 +243,12 @@ class SpotifyDevice extends Device {
     ];
 
     this.addSpotifyAction('pause', {
-      title: 'pause',
+      title: 'Pause',
       description: 'Pause playback',
     }, () => this.spotifyApi.pause(this.callOpts));
 
     this.addSpotifyAction('play', {
-      title: 'play',
+      title: 'Play',
       description: 'Start playback',
     }, () => this.spotifyApi.play(this.callOpts));
   }
