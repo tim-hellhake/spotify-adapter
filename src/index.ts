@@ -6,7 +6,6 @@
 
 'use strict';
 
-const SpotifyAdapter = require('./spotify-adapter');
+import { SpotifyAdapter } from './spotify-adapter';
 
-module.exports =
-    (addonManager, manifest) => new SpotifyAdapter(addonManager, manifest);
+export = (addonManager: any, manifest: any) => new SpotifyAdapter(addonManager, manifest);

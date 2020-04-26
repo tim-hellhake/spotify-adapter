@@ -3,10 +3,10 @@
   "display_name": "Spotify",
   "version": "0.2.1",
   "description": "Control your spotify player",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint ."
+    "build": "tsc -p ."
   },
   "repository": {
     "type": "git",
@@ -22,8 +22,8 @@
     "LICENSE",
     "SHA256SUMS",
     "manifest.json",
-    "index.js",
-    "spotify-adapter.js"
+    "lib/index.js",
+    "lib/spotify-adapter.js"
   ],
   "moziot": {
     "api": {
@@ -86,7 +86,8 @@
     "spotify-web-api-node": "^4.0.0"
   },
   "devDependencies": {
-    "babel-eslint": "^10.1.0",
-    "eslint": "^6.8.0"
+    "@types/request": "^2.48.4",
+    "@types/spotify-web-api-node": "^4.0.1",
+    "typescript": "^3.8.3"
   }
 }

@@ -6,44 +6,51 @@
 
 'use strict';
 
-const SpotifyWebApi = require('spotify-web-api-node');
-
-const {
+import {
   Adapter,
   Device,
   Database,
   Property
-} = require('gateway-addon');
-const request = require('request');
+} from 'gateway-addon';
+
+import request from 'request';
+
+import SpotifyWebApi from 'spotify-web-api-node';
 
 
 class SpotifyProperty extends Property {
-  constructor(device, name, setValueCb, propDescr) {
+  constructor(private device: Device, name: string, private setValueHandler: (value: any) => Promise<any>, propDescr: any) {
     super(device, name, propDescr);
-    this.setValueHandler = setValueCb;
   }
 
-  updateValue(value) {
+  updateValue(value: any) {
     this.setCachedValue(value);
     this.device.notifyPropertyChanged(this);
   }
 
-  setValue(value) {
+  setValue(value: any): Promise<void> {
     return new Promise((resolve, reject) => {
       console.log(`Setting ${this.name} to ${value}`);
       this.setValueHandler(value)
-        .then((updatedValue) => {
+        .then((updatedValue: any) => {
           this.setCachedValue(updatedValue);
           resolve(updatedValue);
           this.device.notifyPropertyChanged(this);
         })
-        .catch((err) => reject(err));
+        .catch((err: any) => reject(err));
     });
   }
 }
 
 class SpotifyDevice extends Device {
-  constructor(adapter, manifest) {
+  private spotifyApi = new SpotifyWebApi();
+  private spotifyActions: { [key: string]: () => void } = {};
+  private state?: SpotifyProperty;
+  private cover?: SpotifyProperty;
+  private callOpts: { device_id?: string } = {};
+  private config: any;
+
+  constructor(adapter: Adapter, manifest: any) {
     super(adapter, manifest.display_name);
 
     this['@context'] = 'https://iot.mozilla.org/schemas/';
@@ -51,8 +58,6 @@ class SpotifyDevice extends Device {
     this['@type'] = manifest['@type'] || ['OnOffSwitch'];
     this.description = manifest.description;
     this.config = manifest.moziot.config;
-    this.spotifyActions = {};
-    this.spotifyApi = new SpotifyWebApi();
 
     const db = new Database(manifest.name);
     db.open()
@@ -70,22 +75,21 @@ class SpotifyDevice extends Device {
             db.saveConfig(config);
 
             if (config.authorized) {
-              console.log(`Refresh-Token: ${this.refreshToken}`);
+              console.log(`Refresh-Token: ${config.refreshToken}`);
               this.spotifyApi.setAccessToken(config.accessToken);
               this.spotifyApi.setRefreshToken(config.refreshToken);
 
               if (this.spotifyApi.getRefreshToken()) {
                 this.spotifyApi.refreshAccessToken()
                   .then((data) => {
-                    // eslint-disable-next-line max-len
                     console.log(`Refreshed access token. Expires in ${data.body.expires_in}`);
 
                     this.spotifyApi.setAccessToken(data.body.access_token);
                     config.accessToken = data.body.access_token;
-                    if (data.body.refresh_token) {
+                    if ((<any>data.body).refresh_token) {
                       console.log(`Refreshed refresh token`);
-                      this.spotifyApi.setRefreshToken(data.body.refresh_token);
-                      config.refreshToken = data.body.refresh_token;
+                      this.spotifyApi.setRefreshToken((<any>data.body).refresh_token);
+                      config.refreshToken = (<any>data.body).refresh_token;
                     }
 
                     db.saveConfig(config);
@@ -102,7 +106,6 @@ class SpotifyDevice extends Device {
                 form: {
                   grant_type: 'authorization_code',
                   code: config.accessToken,
-                  // eslint-disable-next-line max-len
                   redirect_uri: this.config.redirectURI || 'https://ppacher.at/callback',
                   client_id: this.config.clientID,
                   client_secret: this.config.clientSecret,
@@ -136,11 +139,9 @@ class SpotifyDevice extends Device {
           }
 
           if (!config.accessToken) {
-            // eslint-disable-next-line max-len
             // we don't have an access/refresh token yet. Create a new authorization URL,
             // place it in the authorizationCode field and wait for the user
             // to follow the instructions
-            // eslint-disable-next-line max-len
             const scopes = ['user-read-playback-state', 'user-modify-playback-state'];
             const url = this.spotifyApi.createAuthorizeURL(scopes, '');
 
@@ -156,6 +157,7 @@ class SpotifyDevice extends Device {
       });
 
     this.callOpts = {};
+
     if (this.config.deviceID) {
       this.callOpts.device_id = this.config.deviceID;
     }
@@ -174,19 +176,17 @@ class SpotifyDevice extends Device {
     this.spotifyApi.getMyCurrentPlaybackState()
       .then((response) => {
         if (response.statusCode == 204) {
-          this.state.updateValue(false);
+          this.state?.updateValue(false);
         } else if (response.statusCode === 200) {
           if (this.config.deviceID) {
-            // eslint-disable-next-line max-len
-            this.state.updateValue(response.body.device.id === this.config.deviceID &&
+            this.state?.updateValue(response.body.device.id === this.config.deviceID &&
               response.body.is_playing);
           } else {
-            this.state.updateValue(response.body.is_playing);
+            this.state?.updateValue(response.body.is_playing);
           }
 
-          // eslint-disable-next-line max-len
           if (response.body.item && response.body.item.album && response.body.item.album.images) {
-            this.cover.updateValue(response.body.item.album.images[0].url);
+            this.cover?.updateValue(response.body.item.album.images[0].url);
           }
         }
 
@@ -213,7 +213,6 @@ class SpotifyDevice extends Device {
   }
 
   initAlbumCoverProperty() {
-    // eslint-disable-next-line max-len
     this.cover = new SpotifyProperty(this, 'albumCover', () => Promise.reject('readOnly'), {
       title: 'Album Cover',
       type: 'string',
@@ -227,12 +226,12 @@ class SpotifyDevice extends Device {
     this.addSpotifyAction('previous', {
       title: 'Previous',
       description: 'Skip to the previous track',
-    }, () => this.spotifyApi.skipToPrevious(this.callOpts));
+    }, () => this.spotifyApi.skipToPrevious());
 
     this.addSpotifyAction('next', {
       title: 'Next',
       description: 'Skip to the next track',
-    }, () => this.spotifyApi.skipToNext(this.callOpts));
+    }, () => this.spotifyApi.skipToNext());
 
     this.links = [
       {
@@ -253,12 +252,12 @@ class SpotifyDevice extends Device {
     }, () => this.spotifyApi.play(this.callOpts));
   }
 
-  addSpotifyAction(name, description, apiCall) {
+  addSpotifyAction(name: string, description: any, apiCall: () => void) {
     this.spotifyActions[name] = apiCall;
     this.addAction(name, description);
   }
 
-  async performAction(action) {
+  async performAction(action: any) {
     action.start();
 
     const spotifyAction = this.spotifyActions[action.name];
@@ -274,8 +273,8 @@ class SpotifyDevice extends Device {
   }
 }
 
-class SpotifyAdapter extends Adapter {
-  constructor(addonManager, manifest) {
+export class SpotifyAdapter extends Adapter {
+  constructor(addonManager: any, manifest: any) {
     super(addonManager, SpotifyAdapter.name, manifest.name);
 
     addonManager.addAdapter(this);
@@ -283,5 +282,3 @@ class SpotifyAdapter extends Adapter {
     this.handleDeviceAdded(device);
   }
 }
-
-module.exports = SpotifyAdapter;
