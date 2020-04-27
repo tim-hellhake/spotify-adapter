@@ -67,7 +67,7 @@ class SpotifyDevice extends Device {
           this.spotifyApi.setCredentials({
             clientId: config.clientID,
             clientSecret: config.clientSecret,
-            redirectUri: config.redirectURI || 'https://ppacher.at/callback'
+            redirectUri: config.redirectURI || 'https://ppacher.github.io/spotify-auth-callback'
           });
 
           if (config.accessToken) {

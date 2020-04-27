@@ -29,7 +29,7 @@ Although a bit more complex this option is recommened as it will keep spotify-ad
 ![Enter a name, description and select "I don't know"](/images/create-dialog-1.jpg)
 ![Accept Spotify conditions](/images/create-dialog-2.jpg)
 
- 4. [optional] On the application/client page press "Edit Settings" and add a new Redirect URI to "https://ppacher.github.io/spotify-auth-callback"
+ 4. On the application/client page press "Edit Settings" and add a new Redirect URI to "https://ppacher.github.io/spotify-auth-callback"
 
  5. Copy Client-ID and Client-Secret and add it to the configuration of Spotify-Adapter:
 
