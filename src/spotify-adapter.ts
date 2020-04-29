@@ -50,7 +50,7 @@ class SpotifyDevice extends Device {
   private callOpts: { device_id?: string } = {};
   private config: any;
 
-  constructor(adapter: Adapter, manifest: any) {
+  constructor(adapter: Adapter, private manifest: any) {
     super(adapter, manifest.display_name);
 
     this['@context'] = 'https://iot.mozilla.org/schemas/';
@@ -59,7 +59,20 @@ class SpotifyDevice extends Device {
     this.description = manifest.description;
     this.config = manifest.moziot.config;
 
-    const db = new Database(manifest.name);
+    this.callOpts = {};
+
+    if (this.config.deviceID) {
+      this.callOpts.device_id = this.config.deviceID;
+    }
+
+    this.initStateProperty();
+    this.initAlbumCoverProperty();
+    this.initActions();
+    this.initSpotify();
+  }
+
+  async initSpotify() {
+    const db = new Database(this.manifest.name);
     db.open()
       .then(async () => {
         const config = await db.loadConfig();
@@ -80,61 +93,12 @@ class SpotifyDevice extends Device {
               this.spotifyApi.setRefreshToken(config.refreshToken);
 
               if (this.spotifyApi.getRefreshToken()) {
-                this.spotifyApi.refreshAccessToken()
-                  .then((data) => {
-                    console.log(`Refreshed access token. Expires in ${data.body.expires_in}`);
-
-                    this.spotifyApi.setAccessToken(data.body.access_token);
-                    config.accessToken = data.body.access_token;
-                    if ((<any>data.body).refresh_token) {
-                      console.log(`Refreshed refresh token`);
-                      this.spotifyApi.setRefreshToken((<any>data.body).refresh_token);
-                      config.refreshToken = (<any>data.body).refresh_token;
-                    }
-
-                    db.saveConfig(config);
-                    this.updateState();
-                  })
-                  .catch((err) => console.error(err));
+                this.refresh(db, config);
               } else {
                 console.log(`No refresh token available`);
               }
             } else {
-              request.post({
-                url: 'https://accounts.spotify.com/api/token',
-                method: 'POST',
-                form: {
-                  grant_type: 'authorization_code',
-                  code: config.accessToken,
-                  redirect_uri: this.config.redirectURI || 'https://ppacher.at/callback',
-                  client_id: this.config.clientID,
-                  client_secret: this.config.clientSecret,
-                }
-              }, (err, response, body) => {
-                if (err) {
-                  console.error(err);
-                  return;
-                }
-                if (response.statusCode !== 200) {
-                  console.error(body);
-                  return;
-                }
-
-                const data = JSON.parse(body);
-
-                config.accessToken = data.access_token;
-                config.refreshToken = data.refresh_token;
-                config.authorized = true;
-
-                console.log(config);
-
-                db.saveConfig(config);
-
-                this.spotifyApi.setAccessToken(data.access_token);
-                this.spotifyApi.setRefreshToken(data.refresh_token);
-
-                this.updateState();
-              });
+              this.authorize(db, config);
             }
           }
 
@@ -142,29 +106,80 @@ class SpotifyDevice extends Device {
             // we don't have an access/refresh token yet. Create a new authorization URL,
             // place it in the authorizationCode field and wait for the user
             // to follow the instructions
-            const scopes = ['user-read-playback-state', 'user-modify-playback-state'];
-            const url = this.spotifyApi.createAuthorizeURL(scopes, '');
-
-            config.url = url;
-            config.authorized = false;
-            config.refreshToken = '';
-
-            db.saveConfig(config);
+            this.initAuthUrl(db, config);
           }
         } else if (this.config.accessToken) {
           this.spotifyApi.setAccessToken(this.config.accessToken);
         }
       });
+  }
 
-    this.callOpts = {};
+  initAuthUrl(db: Database, config: any) {
+    const scopes = ['user-read-playback-state', 'user-modify-playback-state'];
+    const url = this.spotifyApi.createAuthorizeURL(scopes, '');
 
-    if (this.config.deviceID) {
-      this.callOpts.device_id = this.config.deviceID;
-    }
+    config.url = url;
+    config.authorized = false;
+    config.refreshToken = '';
 
-    this.initStateProperty();
-    this.initAlbumCoverProperty();
-    this.initActions();
+    db.saveConfig(config);
+  }
+
+  authorize(db: Database, config: any) {
+    request.post({
+      url: 'https://accounts.spotify.com/api/token',
+      method: 'POST',
+      form: {
+        grant_type: 'authorization_code',
+        code: config.accessToken,
+        redirect_uri: this.config.redirectURI || 'https://ppacher.at/callback',
+        client_id: this.config.clientID,
+        client_secret: this.config.clientSecret,
+      }
+    }, (err, response, body) => {
+      if (err) {
+        console.error(err);
+        return;
+      }
+      if (response.statusCode !== 200) {
+        console.error(body);
+        return;
+      }
+
+      const data = JSON.parse(body);
+
+      config.accessToken = data.access_token;
+      config.refreshToken = data.refresh_token;
+      config.authorized = true;
+
+      console.log(config);
+
+      db.saveConfig(config);
+
+      this.spotifyApi.setAccessToken(data.access_token);
+      this.spotifyApi.setRefreshToken(data.refresh_token);
+
+      this.updateState();
+    });
+  }
+
+  refresh(db: Database, config: any) {
+    this.spotifyApi.refreshAccessToken()
+      .then((data) => {
+        console.log(`Refreshed access token. Expires in ${data.body.expires_in}`);
+
+        this.spotifyApi.setAccessToken(data.body.access_token);
+        config.accessToken = data.body.access_token;
+        if ((<any>data.body).refresh_token) {
+          console.log(`Refreshed refresh token`);
+          this.spotifyApi.setRefreshToken((<any>data.body).refresh_token);
+          config.refreshToken = (<any>data.body).refresh_token;
+        }
+
+        db.saveConfig(config);
+        this.updateState();
+      })
+      .catch((err) => console.error(err));
   }
 
   schedulePolling() {
