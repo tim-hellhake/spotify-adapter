@@ -163,12 +163,6 @@ class SpotifyDevice extends Device {
     this.spotifyApi.setAccessToken(data.body.access_token);
     config.accessToken = data.body.access_token;
 
-    if ((<any>data.body).refresh_token) {
-      console.log(`Refreshed refresh token`);
-      this.spotifyApi.setRefreshToken((<any>data.body).refresh_token);
-      config.refreshToken = (<any>data.body).refresh_token;
-    }
-
     db.saveConfig(config);
     this.updateState();
   }
