@@ -19,7 +19,7 @@ import SpotifyWebApi from 'spotify-web-api-node';
 
 
 class SpotifyProperty extends Property {
-  constructor(private device: Device, name: string, private setValueHandler: (value: any) => Promise<any>, propDescr: any) {
+  constructor(private device: Device, name: string, private setValueHandler: (value: any) => Promise<void>, propDescr: any) {
     super(device, name, propDescr);
   }
 
@@ -30,9 +30,8 @@ class SpotifyProperty extends Property {
 
   async setValue(value: any): Promise<void> {
     console.log(`Setting ${this.name} to ${value}`);
-    const updatedValue = await this.setValueHandler(value);
-    this.setCachedValue(updatedValue);
-    this.device.notifyPropertyChanged(this);
+    await this.setValueHandler(value);
+    super.setValue(value);
   }
 }
 
@@ -207,8 +206,6 @@ class SpotifyDevice extends Device {
       } else {
         await this.spotifyApi.pause(this.callOpts);
       }
-
-      return value;
     }, {
       title: 'State',
       '@type': 'OnOffProperty',
