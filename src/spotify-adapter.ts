@@ -28,17 +28,11 @@ class SpotifyProperty extends Property {
     this.device.notifyPropertyChanged(this);
   }
 
-  setValue(value: any): Promise<void> {
-    return new Promise((resolve, reject) => {
-      console.log(`Setting ${this.name} to ${value}`);
-      this.setValueHandler(value)
-        .then((updatedValue: any) => {
-          this.setCachedValue(updatedValue);
-          resolve(updatedValue);
-          this.device.notifyPropertyChanged(this);
-        })
-        .catch((err: any) => reject(err));
-    });
+  async setValue(value: any): Promise<void> {
+    console.log(`Setting ${this.name} to ${value}`);
+    const updatedValue = await this.setValueHandler(value);
+    this.setCachedValue(updatedValue);
+    this.device.notifyPropertyChanged(this);
   }
 }
 
@@ -73,45 +67,44 @@ class SpotifyDevice extends Device {
 
   async initSpotify() {
     const db = new Database(this.manifest.name);
-    db.open()
-      .then(async () => {
-        const config = await db.loadConfig();
-        if (config.clientID) {
-          this.spotifyApi.setCredentials({
-            clientId: config.clientID,
-            clientSecret: config.clientSecret,
-            redirectUri: config.redirectURI || 'https://ppacher.github.io/spotify-auth-callback'
-          });
+    await db.open();
+    const config = await db.loadConfig();
 
-          if (config.accessToken) {
-            config.url = '';
-            db.saveConfig(config);
-
-            if (config.authorized) {
-              console.log(`Refresh-Token: ${config.refreshToken}`);
-              this.spotifyApi.setAccessToken(config.accessToken);
-              this.spotifyApi.setRefreshToken(config.refreshToken);
-
-              if (this.spotifyApi.getRefreshToken()) {
-                this.refresh(db, config);
-              } else {
-                console.log(`No refresh token available`);
-              }
-            } else {
-              this.authorize(db, config);
-            }
-          }
-
-          if (!config.accessToken) {
-            // we don't have an access/refresh token yet. Create a new authorization URL,
-            // place it in the authorizationCode field and wait for the user
-            // to follow the instructions
-            this.initAuthUrl(db, config);
-          }
-        } else if (this.config.accessToken) {
-          this.spotifyApi.setAccessToken(this.config.accessToken);
-        }
+    if (config.clientID) {
+      this.spotifyApi.setCredentials({
+        clientId: config.clientID,
+        clientSecret: config.clientSecret,
+        redirectUri: config.redirectURI || 'https://ppacher.github.io/spotify-auth-callback'
       });
+
+      if (config.accessToken) {
+        config.url = '';
+        db.saveConfig(config);
+
+        if (config.authorized) {
+          console.log(`Refresh-Token: ${config.refreshToken}`);
+          this.spotifyApi.setAccessToken(config.accessToken);
+          this.spotifyApi.setRefreshToken(config.refreshToken);
+
+          if (this.spotifyApi.getRefreshToken()) {
+            this.refresh(db, config);
+          } else {
+            console.log(`No refresh token available`);
+          }
+        } else {
+          this.authorize(db, config);
+        }
+      }
+
+      if (!config.accessToken) {
+        // we don't have an access/refresh token yet. Create a new authorization URL,
+        // place it in the authorizationCode field and wait for the user
+        // to follow the instructions
+        this.initAuthUrl(db, config);
+      }
+    } else if (this.config.accessToken) {
+      this.spotifyApi.setAccessToken(this.config.accessToken);
+    }
   }
 
   initAuthUrl(db: Database, config: any) {
@@ -163,23 +156,22 @@ class SpotifyDevice extends Device {
     });
   }
 
-  refresh(db: Database, config: any) {
-    this.spotifyApi.refreshAccessToken()
-      .then((data) => {
-        console.log(`Refreshed access token. Expires in ${data.body.expires_in}`);
+  async refresh(db: Database, config: any) {
+    const data = await this.spotifyApi.refreshAccessToken();
 
-        this.spotifyApi.setAccessToken(data.body.access_token);
-        config.accessToken = data.body.access_token;
-        if ((<any>data.body).refresh_token) {
-          console.log(`Refreshed refresh token`);
-          this.spotifyApi.setRefreshToken((<any>data.body).refresh_token);
-          config.refreshToken = (<any>data.body).refresh_token;
-        }
+    console.log(`Refreshed access token. Expires in ${data.body.expires_in}`);
 
-        db.saveConfig(config);
-        this.updateState();
-      })
-      .catch((err) => console.error(err));
+    this.spotifyApi.setAccessToken(data.body.access_token);
+    config.accessToken = data.body.access_token;
+
+    if ((<any>data.body).refresh_token) {
+      console.log(`Refreshed refresh token`);
+      this.spotifyApi.setRefreshToken((<any>data.body).refresh_token);
+      config.refreshToken = (<any>data.body).refresh_token;
+    }
+
+    db.saveConfig(config);
+    this.updateState();
   }
 
   schedulePolling() {
@@ -187,37 +179,36 @@ class SpotifyDevice extends Device {
     setTimeout(() => this.updateState(), interval);
   }
 
-  updateState() {
-    this.spotifyApi.getMyCurrentPlaybackState()
-      .then((response) => {
-        if (response.statusCode == 204) {
-          this.state?.updateValue(false);
-        } else if (response.statusCode === 200) {
-          if (this.config.deviceID) {
-            this.state?.updateValue(response.body.device.id === this.config.deviceID &&
-              response.body.is_playing);
-          } else {
-            this.state?.updateValue(response.body.is_playing);
-          }
+  async updateState() {
+    const response = await this.spotifyApi.getMyCurrentPlaybackState()
 
-          if (response.body.item && response.body.item.album && response.body.item.album.images) {
-            this.cover?.updateValue(response.body.item.album.images[0].url);
-          }
-        }
+    if (response.statusCode == 204) {
+      this.state?.updateValue(false);
+    } else if (response.statusCode === 200) {
+      if (this.config.deviceID) {
+        this.state?.updateValue(response.body.device.id === this.config.deviceID &&
+          response.body.is_playing);
+      } else {
+        this.state?.updateValue(response.body.is_playing);
+      }
 
-        this.schedulePolling();
-      }).catch((err) => console.error(err));
+      if (response.body.item && response.body.item.album && response.body.item.album.images) {
+        this.cover?.updateValue(response.body.item.album.images[0].url);
+      }
+    }
+
+    this.schedulePolling();
   }
 
   initStateProperty() {
-    this.state = new SpotifyProperty(this, 'state', (value) => {
+    this.state = new SpotifyProperty(this, 'state', async (value) => {
       if (value) {
-        return this.spotifyApi.play(this.callOpts)
-          .then(() => value);
+        await this.spotifyApi.play(this.callOpts);
+      } else {
+        await this.spotifyApi.pause(this.callOpts);
       }
 
-      return this.spotifyApi.pause(this.callOpts)
-        .then(() => value);
+      return value;
     }, {
       title: 'State',
       '@type': 'OnOffProperty',
