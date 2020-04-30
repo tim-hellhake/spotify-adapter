@@ -91,6 +91,8 @@ class SpotifyDevice extends Device {
 
           if (this.spotifyApi.getRefreshToken()) {
             this.refresh(db, config);
+
+            setInterval(() => this.refresh(db, config), 45 * 60 * 1000);
           } else {
             console.log('No refresh token available');
           }
