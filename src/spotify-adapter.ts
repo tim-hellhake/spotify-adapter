@@ -65,11 +65,14 @@ class SpotifyDevice extends Device {
   }
 
   async initSpotify() {
+    console.log('Initializing spotify client');
     const db = new Database(this.manifest.name);
     await db.open();
     const config = await db.loadConfig();
 
     if (config.clientID) {
+      console.log('Found client id');
+
       this.spotifyApi.setCredentials({
         clientId: config.clientID,
         clientSecret: config.clientSecret,
@@ -77,18 +80,19 @@ class SpotifyDevice extends Device {
       });
 
       if (config.accessToken) {
+        console.log('Found access token');
         config.url = '';
         db.saveConfig(config);
 
         if (config.authorized) {
-          console.log(`Refresh-Token: ${config.refreshToken}`);
+          console.log('Client is already authorized');
           this.spotifyApi.setAccessToken(config.accessToken);
           this.spotifyApi.setRefreshToken(config.refreshToken);
 
           if (this.spotifyApi.getRefreshToken()) {
             this.refresh(db, config);
           } else {
-            console.log(`No refresh token available`);
+            console.log('No refresh token available');
           }
         } else {
           this.authorize(db, config);
@@ -107,6 +111,8 @@ class SpotifyDevice extends Device {
   }
 
   initAuthUrl(db: Database, config: any) {
+    console.log('Creating authorize url for client');
+
     const scopes = ['user-read-playback-state', 'user-modify-playback-state'];
     const url = this.spotifyApi.createAuthorizeURL(scopes, '');
 
@@ -118,6 +124,8 @@ class SpotifyDevice extends Device {
   }
 
   authorize(db: Database, config: any) {
+    console.log('Authorizing client by authorization code');
+
     request.post({
       url: 'https://accounts.spotify.com/api/token',
       method: 'POST',
@@ -144,7 +152,7 @@ class SpotifyDevice extends Device {
       config.refreshToken = data.refresh_token;
       config.authorized = true;
 
-      console.log(config);
+    console.log('Client is now authorized');
 
       db.saveConfig(config);
 
@@ -156,9 +164,11 @@ class SpotifyDevice extends Device {
   }
 
   async refresh(db: Database, config: any) {
+    console.log('Refreshing access token');
+
     const data = await this.spotifyApi.refreshAccessToken();
 
-    console.log(`Refreshed access token. Expires in ${data.body.expires_in}`);
+    console.log(`Refreshed access token, expires in ${data.body.expires_in}`);
 
     this.spotifyApi.setAccessToken(data.body.access_token);
     config.accessToken = data.body.access_token;
