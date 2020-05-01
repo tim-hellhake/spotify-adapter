@@ -3,7 +3,7 @@
   "id": "spotify-adapter",
   "name": "Spotify",
   "short_name": "Spotify",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Control your spotify player",
   "homepage_url": "https://github.com/tim-hellhake/spotify-adapter#readme",
   "license": "MPL-2.0",
