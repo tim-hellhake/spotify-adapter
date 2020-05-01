@@ -134,7 +134,7 @@ class SpotifyDevice extends Device {
       form: {
         grant_type: 'authorization_code',
         code: config.accessToken,
-        redirect_uri: this.config.redirectURI || 'https://ppacher.at/callback',
+        redirect_uri: this.config.redirectURI || 'https://ppacher.github.io/spotify-auth-callback',
         client_id: this.config.clientID,
         client_secret: this.config.clientSecret,
       }
