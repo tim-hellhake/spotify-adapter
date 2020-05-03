@@ -154,7 +154,7 @@ class SpotifyDevice extends Device {
       config.refreshToken = data.refresh_token;
       config.authorized = true;
 
-    console.log('Client is now authorized');
+      console.log('Client is now authorized');
 
       db.saveConfig(config);
 
