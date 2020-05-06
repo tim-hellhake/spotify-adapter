@@ -1,7 +1,7 @@
 {
   "name": "spotify-adapter",
   "display_name": "Spotify",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Control your spotify player",
   "main": "lib/index.js",
   "scripts": {
