@@ -82,10 +82,14 @@
     }
   },
   "dependencies": {
+    "mkdirp": "^1.0.4",
+    "node-fetch": "^2.6.0",
     "request": "^2.88.2",
     "spotify-web-api-node": "^4.0.0"
   },
   "devDependencies": {
+    "@types/mkdirp": "^1.0.0",
+    "@types/node-fetch": "^2.5.7",
     "@types/request": "^2.48.4",
     "@types/spotify-web-api-node": "^4.0.1",
     "typescript": "^3.8.3"

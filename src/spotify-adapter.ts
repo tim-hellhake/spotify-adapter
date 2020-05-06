@@ -17,6 +17,15 @@ import request from 'request';
 
 import SpotifyWebApi from 'spotify-web-api-node';
 
+import { homedir } from 'os';
+
+import { join } from 'path';
+
+import mkdirp from 'mkdirp';
+
+import fetch from 'node-fetch';
+
+import { writeFile } from 'fs';
 
 class SpotifyProperty extends Property {
   constructor(private device: Device, name: string, private setValueHandler: (value: any) => Promise<void>, propDescr: any) {
@@ -35,6 +44,8 @@ class SpotifyProperty extends Property {
   }
 }
 
+const ALBUM_FILE_NAME = 'album.jpg';
+
 class SpotifyDevice extends Device {
   private spotifyApi = new SpotifyWebApi();
   private spotifyActions: { [key: string]: () => void } = {};
@@ -42,6 +53,7 @@ class SpotifyDevice extends Device {
   private cover?: SpotifyProperty;
   private callOpts: { device_id?: string } = {};
   private config: any;
+  private mediaPath: string;
 
   constructor(adapter: Adapter, private manifest: any) {
     super(adapter, manifest.display_name);
@@ -58,7 +70,11 @@ class SpotifyDevice extends Device {
       this.callOpts.device_id = this.config.deviceID;
     }
 
+    const baseDir = process.env.MOZIOT_HOME || join(homedir(), '.mozilla-iot') || '';
+    this.mediaPath = join(baseDir, 'media', 'spotify');
+
     this.initStateProperty();
+    this.initAlbumDirectory();
     this.initAlbumCoverProperty();
     this.initActions();
     this.initSpotify();
@@ -197,8 +213,10 @@ class SpotifyDevice extends Device {
         this.state?.updateValue(response.body.is_playing);
       }
 
-      if (response.body.item && response.body.item.album && response.body.item.album.images) {
-        this.cover?.updateValue(response.body.item.album.images[0].url);
+      const images = response.body?.item?.album?.images;
+
+      if (images && images.length > 0) {
+        this.updateAlbumCoverProperty(images[0].url);
       }
     }
 
@@ -221,14 +239,44 @@ class SpotifyDevice extends Device {
     this.properties.set('state', this.state);
   }
 
+  async initAlbumDirectory() {
+    console.log(`Creating media directory ${join(this.mediaPath, this.id)}`);
+    await mkdirp(join(this.mediaPath, this.id));
+  }
+
   initAlbumCoverProperty() {
     this.cover = new SpotifyProperty(this, 'albumCover', () => Promise.reject('readOnly'), {
+      '@type': 'ImageProperty',
       title: 'Album Cover',
       type: 'string',
       readOnly: true,
+      links: [
+        {
+          mediaType: 'image/jpeg',
+          href: `/media/spotify/${this.id}/${ALBUM_FILE_NAME}`,
+          rel: 'alternate'
+        }
+      ]
     });
 
     this.properties.set('albumCover', this.cover);
+  }
+
+  async updateAlbumCoverProperty(url: string) {
+    const albumUrl = join(this.mediaPath, this.id, ALBUM_FILE_NAME);
+    const response = await fetch(url);
+    const blob = await response.buffer();
+
+    await new Promise((resolve, reject) => {
+      writeFile(albumUrl, blob, (e) => {
+        if (e) {
+          reject(e);
+        }
+        else {
+          resolve();
+        }
+      });
+    });
   }
 
   initActions() {

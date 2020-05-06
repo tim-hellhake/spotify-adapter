@@ -28,6 +28,7 @@ declare module 'gateway-addon' {
     }
 
     class Device {
+        protected id: string;
         protected '@context': string;
         protected '@type': string[];
         protected title: string;
