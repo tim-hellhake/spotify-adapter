@@ -44,6 +44,8 @@ class SpotifyProperty extends Property {
   }
 }
 
+const MEDIA_DIR = 'media';
+const ADAPTER_DIR = 'spotify';
 const ALBUM_FILE_NAME = 'album.jpg';
 
 class SpotifyDevice extends Device {
@@ -71,7 +73,7 @@ class SpotifyDevice extends Device {
     }
 
     const baseDir = process.env.MOZIOT_HOME || join(homedir(), '.mozilla-iot') || '';
-    this.mediaPath = join(baseDir, 'media', 'spotify');
+    this.mediaPath = join(baseDir, MEDIA_DIR, ADAPTER_DIR);
 
     this.initStateProperty();
     this.initAlbumDirectory();
@@ -253,7 +255,7 @@ class SpotifyDevice extends Device {
       links: [
         {
           mediaType: 'image/jpeg',
-          href: `/media/spotify/${this.id}/${ALBUM_FILE_NAME}`,
+          href: `/${MEDIA_DIR}/${ADAPTER_DIR}/${this.id}/${ALBUM_FILE_NAME}`,
           rel: 'alternate'
         }
       ]
