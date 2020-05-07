@@ -56,6 +56,7 @@ class SpotifyDevice extends Device {
   private callOpts: { device_id?: string } = {};
   private config: any;
   private mediaPath: string;
+  private lastAlbumUrl?: string;
 
   constructor(adapter: Adapter, private manifest: any) {
     super(adapter, manifest.display_name);
@@ -266,19 +267,23 @@ class SpotifyDevice extends Device {
 
   async updateAlbumCoverProperty(url: string) {
     const albumUrl = join(this.mediaPath, this.id, ALBUM_FILE_NAME);
-    const response = await fetch(url);
-    const blob = await response.buffer();
 
-    await new Promise((resolve, reject) => {
-      writeFile(albumUrl, blob, (e) => {
-        if (e) {
-          reject(e);
-        }
-        else {
-          resolve();
-        }
+    if (albumUrl != this.lastAlbumUrl) {
+      const response = await fetch(url);
+      const blob = await response.buffer();
+
+      await new Promise((resolve, reject) => {
+        writeFile(albumUrl, blob, (e) => {
+          if (e) {
+            reject(e);
+          }
+          else {
+            this.lastAlbumUrl = albumUrl;
+            resolve();
+          }
+        });
       });
-    });
+    }
   }
 
   initActions() {
