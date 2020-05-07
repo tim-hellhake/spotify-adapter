@@ -53,6 +53,9 @@ class SpotifyDevice extends Device {
   private spotifyActions: { [key: string]: () => void } = {};
   private state?: SpotifyProperty;
   private cover?: SpotifyProperty;
+  private track?: SpotifyProperty;
+  private album?: SpotifyProperty;
+  private artist?: SpotifyProperty;
   private callOpts: { device_id?: string } = {};
   private config: any;
   private mediaPath: string;
@@ -78,7 +81,7 @@ class SpotifyDevice extends Device {
 
     this.initStateProperty();
     this.initAlbumDirectory();
-    this.initAlbumCoverProperty();
+    this.initPlaybackProperties();
     this.initActions();
     this.initSpotify();
   }
@@ -205,21 +208,34 @@ class SpotifyDevice extends Device {
 
   async updateState() {
     const response = await this.spotifyApi.getMyCurrentPlaybackState()
+    const playback = response?.body;
 
     if (response.statusCode == 204) {
       this.state?.updateValue(false);
+      this.track?.setCachedValueAndNotify('');
+      this.album?.setCachedValueAndNotify('');
+      this.artist?.setCachedValueAndNotify('');
     } else if (response.statusCode === 200) {
       if (this.config.deviceID) {
-        this.state?.updateValue(response.body.device.id === this.config.deviceID &&
-          response.body.is_playing);
+        this.state?.updateValue(playback?.device.id === this.config.deviceID &&
+          playback?.is_playing);
       } else {
-        this.state?.updateValue(response.body.is_playing);
+        this.state?.updateValue(playback?.is_playing);
       }
 
-      const images = response.body?.item?.album?.images;
+      const images = playback?.item?.album?.images;
 
       if (images && images.length > 0) {
         this.updateAlbumCoverProperty(images[0].url);
+      }
+
+      this.track?.setCachedValueAndNotify(playback?.item?.name);
+      this.album?.setCachedValueAndNotify(playback?.item?.album?.name);
+
+      const artists = playback?.item?.album?.artists;
+
+      if (artists && artists.length > 0) {
+        this.artist?.setCachedValueAndNotify(artists.map(x => x.name).join(', '));
       }
     }
 
@@ -247,7 +263,7 @@ class SpotifyDevice extends Device {
     await mkdirp(join(this.mediaPath, this.id));
   }
 
-  initAlbumCoverProperty() {
+  initPlaybackProperties() {
     this.cover = new SpotifyProperty(this, 'albumCover', () => Promise.reject('readOnly'), {
       '@type': 'ImageProperty',
       title: 'Album Cover',
@@ -263,6 +279,30 @@ class SpotifyDevice extends Device {
     });
 
     this.properties.set('albumCover', this.cover);
+
+    this.track = new SpotifyProperty(this, 'track', () => Promise.reject('readOnly'), {
+      title: 'Track',
+      type: 'string',
+      readOnly: true
+    });
+
+    this.properties.set('track', this.track);
+
+    this.album = new SpotifyProperty(this, 'album', () => Promise.reject('readOnly'), {
+      title: 'Album',
+      type: 'string',
+      readOnly: true
+    });
+
+    this.properties.set('album', this.album);
+
+    this.artist = new SpotifyProperty(this, 'artist', () => Promise.reject('readOnly'), {
+      title: 'Artist',
+      type: 'string',
+      readOnly: true
+    });
+
+    this.properties.set('artist', this.artist);
   }
 
   async updateAlbumCoverProperty(url: string) {
