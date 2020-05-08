@@ -56,6 +56,7 @@ class SpotifyDevice extends Device {
   private track?: SpotifyProperty;
   private album?: SpotifyProperty;
   private artist?: SpotifyProperty;
+  private volume?: SpotifyProperty;
   private callOpts: { device_id?: string } = {};
   private config: any;
   private mediaPath: string;
@@ -237,6 +238,8 @@ class SpotifyDevice extends Device {
       if (artists && artists.length > 0) {
         this.artist?.setCachedValueAndNotify(artists.map(x => x.name).join(', '));
       }
+
+      this.volume?.setCachedValueAndNotify(playback?.device?.volume_percent);
     }
 
     this.schedulePolling();
@@ -303,6 +306,16 @@ class SpotifyDevice extends Device {
     });
 
     this.properties.set('artist', this.artist);
+
+
+    this.volume = new SpotifyProperty(this, 'volume', async value => {
+      await this.spotifyApi.setVolume(value)
+    }, {
+      title: 'Volume',
+      type: 'integer'
+    });
+
+    this.properties.set('volume', this.volume);
   }
 
   async updateAlbumCoverProperty(url: string) {
