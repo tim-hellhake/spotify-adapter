@@ -57,12 +57,14 @@ class SpotifyDevice extends Device {
   private album?: SpotifyProperty;
   private artist?: SpotifyProperty;
   private volume?: SpotifyProperty;
+  private position?: SpotifyProperty;
   private callOpts: { device_id?: string } = {};
   private config: any;
   private mediaPath: string;
   private lastAlbumUrl?: string;
+  private lastDuration?: number;
 
-  constructor(adapter: Adapter, private manifest: any) {
+  constructor(private adapter: Adapter, private manifest: any) {
     super(adapter, manifest.display_name);
 
     this['@context'] = 'https://iot.mozilla.org/schemas/';
@@ -240,6 +242,20 @@ class SpotifyDevice extends Device {
       }
 
       this.volume?.setCachedValueAndNotify(playback?.device?.volume_percent);
+
+      const duration_ms = playback?.item?.duration_ms;
+
+      if (this.position && duration_ms && this.lastDuration != duration_ms) {
+        this.lastDuration = duration_ms;
+        this.position.maximum = duration_ms / 1000;
+        this.adapter.handleDeviceAdded(this);
+      }
+
+      const progress_ms = playback?.progress_ms;
+
+      if (progress_ms) {
+        this.position?.setCachedValueAndNotify(progress_ms / 1000);
+      }
     }
 
     this.schedulePolling();
@@ -316,6 +332,18 @@ class SpotifyDevice extends Device {
     });
 
     this.properties.set('volume', this.volume);
+
+    this.position = new SpotifyProperty(this, 'position', async value => {
+      await this.spotifyApi.seek(value * 1000);
+    }, {
+      '@type': 'LevelProperty',
+      minimum: 0,
+      maximum: 100,
+      title: 'Position',
+      type: 'number'
+    });
+
+    this.properties.set('position', this.position);
   }
 
   async updateAlbumCoverProperty(url: string) {
