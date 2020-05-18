@@ -330,8 +330,11 @@ class SpotifyDevice extends Device {
     this.volume = new SpotifyProperty(this, 'volume', async value => {
       await this.spotifyApi.setVolume(value)
     }, {
+      '@type': 'LevelProperty',
+      minimum: 0,
+      maximum: 100,
       title: 'Volume',
-      type: 'integer'
+      type: 'number'
     });
 
     this.properties.set('volume', this.volume);
