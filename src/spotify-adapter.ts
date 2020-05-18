@@ -58,6 +58,7 @@ class SpotifyDevice extends Device {
   private artist?: SpotifyProperty;
   private volume?: SpotifyProperty;
   private position?: SpotifyProperty;
+  private repeat?: SpotifyProperty;
   private callOpts: { device_id?: string } = {};
   private config: any;
   private mediaPath: string;
@@ -256,6 +257,8 @@ class SpotifyDevice extends Device {
       if (progress_ms) {
         this.position?.setCachedValueAndNotify(progress_ms / 1000);
       }
+
+      this?.repeat?.setCachedValueAndNotify(playback?.repeat_state);
     }
 
     this.schedulePolling();
@@ -344,6 +347,16 @@ class SpotifyDevice extends Device {
     });
 
     this.properties.set('position', this.position);
+
+    this.repeat = new SpotifyProperty(this, 'repeat', async value => {
+      await this.spotifyApi.setRepeat({state: value})
+    }, {
+      title: 'Repeat',
+      type: 'string',
+      enum: ['off', 'context', 'track']
+    });
+
+    this.properties.set('repeat', this.repeat);
   }
 
   async updateAlbumCoverProperty(url: string) {
