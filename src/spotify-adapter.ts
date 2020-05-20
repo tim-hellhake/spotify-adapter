@@ -363,20 +363,19 @@ class SpotifyDevice extends Device {
   }
 
   async updateAlbumCoverProperty(url: string) {
-    const albumUrl = join(this.mediaPath, this.id, ALBUM_FILE_NAME);
+    const coverFilePath = join(this.mediaPath, this.id, ALBUM_FILE_NAME);
 
-    if (albumUrl != this.lastAlbumUrl) {
+    if (url != this.lastAlbumUrl) {
       const response = await fetch(url);
       const blob = await response.buffer();
 
       await new Promise((resolve, reject) => {
-        writeFile(albumUrl, blob, (e) => {
+        writeFile(coverFilePath, blob, (e) => {
           if (e) {
             reject(e);
           }
           else {
-            this.lastAlbumUrl = albumUrl;
-            console.log('Updated cover file');
+            this.lastAlbumUrl = url;
             resolve();
           }
         });
