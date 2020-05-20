@@ -376,6 +376,7 @@ class SpotifyDevice extends Device {
           }
           else {
             this.lastAlbumUrl = albumUrl;
+            console.log('Updated cover file');
             resolve();
           }
         });
