@@ -207,7 +207,7 @@ class SpotifyDevice extends Device {
 
   schedulePolling() {
     const interval = (this.config.interval || 60) * 1000;
-    setTimeout(() => this.updateState(), interval);
+    setInterval(() => this.updateState(), interval);
   }
 
   async updateState() {
@@ -260,8 +260,6 @@ class SpotifyDevice extends Device {
 
       this?.repeat?.setCachedValueAndNotify(playback?.repeat_state);
     }
-
-    this.schedulePolling();
   }
 
   initStateProperty() {
@@ -441,5 +439,6 @@ export class SpotifyAdapter extends Adapter {
     addonManager.addAdapter(this);
     const device = new SpotifyDevice(this, manifest);
     this.handleDeviceAdded(device);
+    device.schedulePolling();
   }
 }
