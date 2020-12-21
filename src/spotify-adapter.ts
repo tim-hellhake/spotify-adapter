@@ -10,36 +10,42 @@ import {
   Adapter,
   Device,
   Database,
-  Property
+  Property,
+  AddonManager,
+  Manifest,
 } from 'gateway-addon';
 
 import request from 'request';
 
 import SpotifyWebApi from 'spotify-web-api-node';
 
-import { homedir } from 'os';
+import {homedir} from 'os';
 
-import { join } from 'path';
+import {join} from 'path';
 
 import mkdirp from 'mkdirp';
 
 import fetch from 'node-fetch';
 
-import { writeFile } from 'fs';
+import {writeFile} from 'fs';
 
 class SpotifyProperty extends Property {
-  constructor(private device: Device, name: string, private setValueHandler: (value: any) => Promise<void>, propDescr: any) {
+  constructor(
+    private device: Device,
+    name: string,
+    private _setValueHandler: (_value: unknown) => Promise<void>,
+    propDescr: unknown) {
     super(device, name, propDescr);
   }
 
-  updateValue(value: any) {
+  updateValue(value: unknown) {
     this.setCachedValue(value);
     this.device.notifyPropertyChanged(this);
   }
 
-  async setValue(value: any): Promise<void> {
+  async setValue(value: unknown): Promise<void> {
     console.log(`Setting ${this.name} to ${value}`);
-    await this.setValueHandler(value);
+    await this._setValueHandler(value);
     super.setValue(value);
   }
 }
@@ -50,38 +56,55 @@ const ALBUM_FILE_NAME = 'album.jpg';
 
 class SpotifyDevice extends Device {
   private spotifyApi = new SpotifyWebApi();
+
   private spotifyActions: { [key: string]: () => void } = {};
+
   private state?: SpotifyProperty;
+
   private cover?: SpotifyProperty;
+
   private track?: SpotifyProperty;
+
   private album?: SpotifyProperty;
+
   private artist?: SpotifyProperty;
+
   private volume?: SpotifyProperty;
+
   private position?: SpotifyProperty;
+
   private repeat?: SpotifyProperty;
+
   private shuffle?: SpotifyProperty;
+
   private callOpts: { device_id?: string } = {};
-  private config: any;
+
+  private config:
+  Record<string, string | boolean | number | Record<string, string>>;
+
   private mediaPath: string;
+
   private lastAlbumUrl?: string;
+
   private lastDuration?: number;
 
-  constructor(private adapter: Adapter, private manifest: any) {
+  constructor(private adapter: Adapter, private manifest: Manifest) {
     super(adapter, manifest.display_name);
 
     this['@context'] = 'https://iot.mozilla.org/schemas/';
     this.title = manifest.display_name;
-    this['@type'] = manifest['@type'] || ['OnOffSwitch'];
-    this.description = manifest.description;
+    this['@type'] = ['OnOffSwitch'];
+    this.description = manifest.display_name;
     this.config = manifest.moziot.config;
 
     this.callOpts = {};
 
     if (this.config.deviceID) {
-      this.callOpts.device_id = this.config.deviceID;
+      this.callOpts.device_id = <string> this.config.deviceID;
     }
 
-    const baseDir = process.env.MOZIOT_HOME || join(homedir(), '.mozilla-iot') || '';
+    const baseDir =
+    process.env.MOZIOT_HOME || join(homedir(), '.mozilla-iot') || '';
     this.mediaPath = join(baseDir, MEDIA_DIR, ADAPTER_DIR);
 
     this.initStateProperty();
@@ -103,7 +126,8 @@ class SpotifyDevice extends Device {
       this.spotifyApi.setCredentials({
         clientId: config.clientID,
         clientSecret: config.clientSecret,
-        redirectUri: config.redirectURI || 'https://ppacher.github.io/spotify-auth-callback'
+        redirectUri:
+        config.redirectURI || 'https://ppacher.github.io/spotify-auth-callback',
       });
 
       if (config.accessToken) {
@@ -129,17 +153,18 @@ class SpotifyDevice extends Device {
       }
 
       if (!config.accessToken) {
-        // we don't have an access/refresh token yet. Create a new authorization URL,
+        // we don't have an access/refresh token yet.
+        // Create a new authorization URL,
         // place it in the authorizationCode field and wait for the user
         // to follow the instructions
         this.initAuthUrl(db, config);
       }
     } else if (this.config.accessToken) {
-      this.spotifyApi.setAccessToken(this.config.accessToken);
+      this.spotifyApi.setAccessToken(<string> this.config.accessToken);
     }
   }
 
-  initAuthUrl(db: Database, config: any) {
+  initAuthUrl(db: Database, config: Record<string, string | boolean>) {
     console.log('Creating authorize url for client');
 
     const scopes = ['user-read-playback-state', 'user-modify-playback-state'];
@@ -152,7 +177,7 @@ class SpotifyDevice extends Device {
     db.saveConfig(config);
   }
 
-  authorize(db: Database, config: any) {
+  authorize(db: Database, config: Record<string, string | boolean>) {
     console.log('Authorizing client by authorization code');
 
     request.post({
@@ -161,10 +186,12 @@ class SpotifyDevice extends Device {
       form: {
         grant_type: 'authorization_code',
         code: config.accessToken,
-        redirect_uri: this.config.redirectURI || 'https://ppacher.github.io/spotify-auth-callback',
+        redirect_uri:
+        this.config.redirectURI ||
+        'https://ppacher.github.io/spotify-auth-callback',
         client_id: this.config.clientID,
         client_secret: this.config.clientSecret,
-      }
+      },
     }, (err, response, body) => {
       if (err) {
         console.error(err);
@@ -192,7 +219,7 @@ class SpotifyDevice extends Device {
     });
   }
 
-  async refresh(db: Database, config: any) {
+  async refresh(db: Database, config: Record<string, string>) {
     console.log('Refreshing access token');
 
     const data = await this.spotifyApi.refreshAccessToken();
@@ -207,12 +234,12 @@ class SpotifyDevice extends Device {
   }
 
   schedulePolling() {
-    const interval = (this.config.interval || 60) * 1000;
+    const interval = (<number> this.config.interval || 60) * 1000;
     setInterval(() => this.updateState(), interval);
   }
 
   async updateState() {
-    const response = await this.spotifyApi.getMyCurrentPlaybackState()
+    const response = await this.spotifyApi.getMyCurrentPlaybackState();
     const playback = response?.body;
 
     if (response.statusCode == 204) {
@@ -240,7 +267,8 @@ class SpotifyDevice extends Device {
       const artists = playback?.item?.album?.artists;
 
       if (artists && artists.length > 0) {
-        this.artist?.setCachedValueAndNotify(artists.map(x => x.name).join(', '));
+        this.artist?.setCachedValueAndNotify(artists.map((x) => x.name)
+          .join(', '));
       }
 
       this.volume?.setCachedValueAndNotify(playback?.device?.volume_percent);
@@ -286,86 +314,91 @@ class SpotifyDevice extends Device {
   }
 
   initPlaybackProperties() {
-    this.cover = new SpotifyProperty(this, 'albumCover', () => Promise.reject('readOnly'), {
-      '@type': 'ImageProperty',
-      title: 'Album Cover',
-      type: 'string',
-      readOnly: true,
-      links: [
-        {
-          mediaType: 'image/jpeg',
-          href: `/${MEDIA_DIR}/${ADAPTER_DIR}/${this.id}/${ALBUM_FILE_NAME}`,
-          rel: 'alternate'
-        }
-      ]
-    });
+    this.cover = new SpotifyProperty(
+      this, 'albumCover', () => Promise.reject('readOnly'), {
+        '@type': 'ImageProperty',
+        title: 'Album Cover',
+        type: 'string',
+        readOnly: true,
+        links: [
+          {
+            mediaType: 'image/jpeg',
+            href: `/${MEDIA_DIR}/${ADAPTER_DIR}/${this.id}/${ALBUM_FILE_NAME}`,
+            rel: 'alternate',
+          },
+        ],
+      });
 
     this.properties.set('albumCover', this.cover);
 
-    this.track = new SpotifyProperty(this, 'track', () => Promise.reject('readOnly'), {
-      title: 'Track',
-      type: 'string',
-      readOnly: true
-    });
+    this.track = new SpotifyProperty(
+      this, 'track', () => Promise.reject('readOnly'), {
+        title: 'Track',
+        type: 'string',
+        readOnly: true,
+      });
 
     this.properties.set('track', this.track);
 
-    this.album = new SpotifyProperty(this, 'album', () => Promise.reject('readOnly'), {
-      title: 'Album',
-      type: 'string',
-      readOnly: true
-    });
+    this.album = new SpotifyProperty(
+      this, 'album', () => Promise.reject('readOnly'), {
+        title: 'Album',
+        type: 'string',
+        readOnly: true,
+      });
 
     this.properties.set('album', this.album);
 
-    this.artist = new SpotifyProperty(this, 'artist', () => Promise.reject('readOnly'), {
-      title: 'Artist',
-      type: 'string',
-      readOnly: true
-    });
+    this.artist = new SpotifyProperty(
+      this, 'artist', () => Promise.reject('readOnly'), {
+        title: 'Artist',
+        type: 'string',
+        readOnly: true,
+      });
 
     this.properties.set('artist', this.artist);
 
 
-    this.volume = new SpotifyProperty(this, 'volume', async value => {
-      await this.spotifyApi.setVolume(value)
+    this.volume = new SpotifyProperty(this, 'volume', async (value) => {
+      await this.spotifyApi.setVolume(<number>value);
     }, {
       '@type': 'LevelProperty',
       minimum: 0,
       maximum: 100,
       title: 'Volume',
-      type: 'number'
+      type: 'number',
     });
 
     this.properties.set('volume', this.volume);
 
-    this.position = new SpotifyProperty(this, 'position', async value => {
-      await this.spotifyApi.seek(value * 1000);
+    this.position = new SpotifyProperty(this, 'position', async (value) => {
+      await this.spotifyApi.seek(<number>value * 1000);
     }, {
       '@type': 'LevelProperty',
       minimum: 0,
       maximum: 100,
       title: 'Position',
-      type: 'number'
+      type: 'number',
     });
 
     this.properties.set('position', this.position);
 
-    this.repeat = new SpotifyProperty(this, 'repeat', async value => {
-      await this.spotifyApi.setRepeat({ state: value })
+    this.repeat = new SpotifyProperty(this, 'repeat', async (value) => {
+      await this.spotifyApi.setRepeat(
+        {state: <'off' | 'context' | 'track'>value});
     }, {
       title: 'Repeat',
       type: 'string',
-      enum: ['off', 'context', 'track']
+      enum: ['off', 'context', 'track'],
     });
 
     this.properties.set('repeat', this.repeat);
 
-    this.shuffle = new SpotifyProperty(this, 'shuffle', async value => {
-      await this.spotifyApi.setShuffle({ state: value })
+    this.shuffle = new SpotifyProperty(this, 'shuffle', async (value) => {
+      await this.spotifyApi.setShuffle({state: <boolean>value});
     }, {
       title: 'Shuffle',
-      type: 'boolean'
+      type: 'boolean',
     });
 
     this.properties.set('shuffle', this.shuffle);
@@ -378,12 +411,11 @@ class SpotifyDevice extends Device {
       const response = await fetch(url);
       const blob = await response.buffer();
 
-      await new Promise((resolve, reject) => {
+      await new Promise<void>((resolve, reject) => {
         writeFile(coverFilePath, blob, (e) => {
           if (e) {
             reject(e);
-          }
-          else {
+          } else {
             this.lastAlbumUrl = url;
             resolve();
           }
@@ -422,12 +454,13 @@ class SpotifyDevice extends Device {
     }, () => this.spotifyApi.play(this.callOpts));
   }
 
-  addSpotifyAction(name: string, description: any, apiCall: () => void) {
+  addSpotifyAction(name: string, description: unknown, apiCall: () => void) {
     this.spotifyActions[name] = apiCall;
     this.addAction(name, description);
   }
 
-  async performAction(action: any) {
+  async performAction(
+    action:{name: string, start: () => void, finish: () => void}) {
     action.start();
 
     const spotifyAction = this.spotifyActions[action.name];
@@ -444,7 +477,7 @@ class SpotifyDevice extends Device {
 }
 
 export class SpotifyAdapter extends Adapter {
-  constructor(addonManager: any, manifest: any) {
+  constructor(addonManager: AddonManager, manifest: Manifest) {
     super(addonManager, SpotifyAdapter.name, manifest.name);
 
     addonManager.addAdapter(this);

@@ -6,7 +6,7 @@
 
 declare module 'gateway-addon' {
     class Event {
-        constructor(device: any, name: string, data?: any);
+      constructor(_device: unknown, _name: string, _data?: unknown);
     }
 
     interface EventDescription {
@@ -21,29 +21,42 @@ declare module 'gateway-addon' {
 
     class Property {
         protected name: string;
+
         public maximum: number;
-        constructor(device: Device, name: string, propertyDescr: {});
-        public setCachedValue(value: any): void;
-        public setCachedValueAndNotify(value: any): void;
-        public setValue(value: any): Promise<void>
+
+        constructor(_device: Device, _name: string, _propertyDescr: unknown);
+
+        public setCachedValue(_value: unknown): void;
+
+        public setCachedValueAndNotify(_value: unknown): void;
+
+        public setValue(_value: unknown): Promise<void>
     }
 
     class Device {
         protected id: string;
+
         protected '@context': string;
+
         protected '@type': string[];
+
         protected title: string;
+
         protected description: string;
+
         protected links: Link[];
 
-        constructor(adapter: Adapter, id: string);
+        constructor(_adapter: Adapter, _id: string);
 
-        public properties: Map<String, Property>;
-        public notifyPropertyChanged(property: Property): void;
-        public addAction(name: string, metadata: any): void;
+        public properties: Map<string, Property>;
 
-        public events: Map<String, EventDescription>;
-        public eventNotify(event: Event): void;
+        public notifyPropertyChanged(_property: Property): void;
+
+        public addAction(_name: string, _metadata: unknown): void;
+
+        public events: Map<string, EventDescription>;
+
+        public eventNotify(_event: Event): void;
     }
 
     interface Link {
@@ -53,16 +66,32 @@ declare module 'gateway-addon' {
     }
 
     class Adapter {
-        constructor(addonManager: any, id: string, packageName: string);
+      constructor(
+        _addonManager: AddonManager, _id: string, _packageName: string);
 
-        public handleDeviceAdded(device: Device): void;
+      public handleDeviceAdded(_device: Device): void;
     }
 
     class Database {
-        constructor(packageName: string, path?: string);
+      constructor(_packageName: string, _path?: string);
 
-        public open(): Promise<void>;
-        public loadConfig(): Promise<any>;
-        public saveConfig(config: any): Promise<void>;
+      public open(): Promise<void>;
+
+      public loadConfig(): Promise<Record<string, string>>;
+
+      public saveConfig(
+        _config: Record<string, string | boolean>): Promise<void>;
+    }
+
+    class AddonManager {
+      addAdapter(_adapter: Adapter): void;
+    }
+
+    interface Manifest {
+      name: string,
+      display_name: string,
+      moziot: {
+        config: Record<string, string>
+      }
     }
 }

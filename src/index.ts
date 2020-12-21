@@ -6,6 +6,9 @@
 
 'use strict';
 
-import { SpotifyAdapter } from './spotify-adapter';
+import {AddonManager, Manifest} from 'gateway-addon';
+import {SpotifyAdapter} from './spotify-adapter';
 
-export = (addonManager: any, manifest: any) => new SpotifyAdapter(addonManager, manifest);
+export = function(addonManager: AddonManager, manifest: Manifest): void {
+  new SpotifyAdapter(addonManager, manifest);
+}
