@@ -28,7 +28,7 @@
   ],
   "dependencies": {
     "mkdirp": "^1.0.4",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.1",
     "request": "^2.88.2",
     "spotify-web-api-node": "^4.0.0"
   },
