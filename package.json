@@ -27,6 +27,8 @@
     "manifest.json",
     "lib/index.js",
     "lib/spotify-adapter.js",
+    "lib/spotify-api-handler.js",
+    "lib/token-provider.js",
     "views"
   ],
   "dependencies": {
