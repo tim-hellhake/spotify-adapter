@@ -136,7 +136,9 @@ export class TokenProvider {
       console.log('Saving token provider state');
       const db = new Database('spotify-adapter', '');
       await db.open();
+      const oldState = <State><unknown> await db.loadConfig();
       const state: State = {
+        ...oldState,
         clientID: this.spotifyApi.getClientId(),
         clientSecret: this.spotifyApi.getClientSecret(),
         refreshToken: this.spotifyApi.getRefreshToken(),
