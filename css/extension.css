@@ -1,0 +1,28 @@
+#extension-spotify-adapter-view {
+  height: calc(100% - 7.6rem);
+  box-sizing: border-box;
+  overflow: auto;
+  position: relative;
+}
+
+#extension-spotify-adapter-content {
+  position: relative;
+  max-height: 100%;
+  text-align: left;
+  font-size: 1.6rem;
+  color: #fff;
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+.extension-spotify-adapter-button {
+  font-size: 1.6rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.extension-spotify-adapter-label {
+  font-weight: bold;
+}

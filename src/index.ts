@@ -7,8 +7,14 @@
 'use strict';
 
 import {AddonManagerProxy} from 'gateway-addon';
+import {SpotifyApiHandler} from './spotify-api-handler';
 import {Manifest, SpotifyAdapter} from './spotify-adapter';
+import {TokenProvider} from './token-provider';
 
-export = function(addonManager: AddonManagerProxy, manifest: Manifest): void {
-  new SpotifyAdapter(addonManager, manifest);
+export = async function(addonManager: AddonManagerProxy, manifest: Manifest)
+: Promise<void> {
+  const tokenProvider = new TokenProvider();
+  await tokenProvider.init();
+  new SpotifyAdapter(addonManager, manifest, tokenProvider);
+  new SpotifyApiHandler(addonManager, tokenProvider);
 }

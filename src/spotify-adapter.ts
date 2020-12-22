@@ -9,13 +9,10 @@
 import {
   Adapter,
   Device,
-  Database,
   Property,
   AddonManagerProxy,
   Action,
 } from 'gateway-addon';
-
-import request from 'request';
 
 import SpotifyWebApi from 'spotify-web-api-node';
 
@@ -33,6 +30,8 @@ import {Action as ActionSchema,
   Link,
   Property as PropertySchema,
   PropertyValue} from 'gateway-addon/src/schema';
+
+import {TokenProvider} from './token-provider';
 
 export interface Manifest {
   name: string,
@@ -68,8 +67,6 @@ const ADAPTER_DIR = 'spotify';
 const ALBUM_FILE_NAME = 'album.jpg';
 
 class SpotifyDevice extends Device {
-  private spotifyApi = new SpotifyWebApi();
-
   private spotifyActions: { [key: string]: () => void } = {};
 
   private state?: SpotifyProperty<boolean>;
@@ -101,7 +98,11 @@ class SpotifyDevice extends Device {
 
   private lastDuration?: number;
 
-  constructor(adapter: Adapter, private manifest: Manifest) {
+  constructor(
+    adapter: Adapter,
+    manifest: Manifest,
+    // eslint-disable-next-line no-unused-vars
+    private spotifyApi: SpotifyWebApi) {
     super(adapter, manifest.display_name);
 
     this['@context'] = 'https://iot.mozilla.org/schemas/';
@@ -124,137 +125,11 @@ class SpotifyDevice extends Device {
     this.initAlbumDirectory();
     this.initPlaybackProperties();
     this.initActions();
-    this.initSpotify();
-  }
-
-  async initSpotify() {
-    console.log('Initializing spotify client');
-    const db = new Database(this.manifest.name, '');
-    await db.open();
-    const config =
-    <Record<string, string | boolean | number | Record<string, string>>>
-    await db.loadConfig();
-
-    if (config.clientID) {
-      console.log('Found client id');
-
-      this.spotifyApi.setCredentials({
-        clientId: <string>config.clientID,
-        clientSecret: <string>config.clientSecret,
-        redirectUri:
-        <string>
-        config.redirectURI || 'https://ppacher.github.io/spotify-auth-callback',
-      });
-
-      if (config.accessToken) {
-        console.log('Found access token');
-        config.url = '';
-        db.saveConfig(config);
-
-        if (config.authorized) {
-          console.log('Client is already authorized');
-          this.spotifyApi.setAccessToken(<string>config.accessToken);
-          this.spotifyApi.setRefreshToken(<string>config.refreshToken);
-
-          if (this.spotifyApi.getRefreshToken()) {
-            this.refresh(db, config);
-
-            setInterval(() => this.refresh(db, config), 45 * 60 * 1000);
-          } else {
-            console.log('No refresh token available');
-          }
-        } else {
-          this.authorize(db, config);
-        }
-      }
-
-      if (!config.accessToken) {
-        // we don't have an access/refresh token yet.
-        // Create a new authorization URL,
-        // place it in the authorizationCode field and wait for the user
-        // to follow the instructions
-        this.initAuthUrl(db, config);
-      }
-    } else if (this.config.accessToken) {
-      this.spotifyApi.setAccessToken(<string> this.config.accessToken);
-    }
-  }
-
-  initAuthUrl(db: Database, config:
-    Record<string, string | boolean | number | Record<string, string>>) {
-    console.log('Creating authorize url for client');
-
-    const scopes = ['user-read-playback-state', 'user-modify-playback-state'];
-    const url = this.spotifyApi.createAuthorizeURL(scopes, '');
-
-    config.url = url;
-    config.authorized = false;
-    config.refreshToken = '';
-
-    db.saveConfig(config);
-  }
-
-  authorize(db: Database, config:
-    Record<string, string | boolean | number | Record<string, string>>) {
-    console.log('Authorizing client by authorization code');
-
-    request.post({
-      url: 'https://accounts.spotify.com/api/token',
-      method: 'POST',
-      form: {
-        grant_type: 'authorization_code',
-        code: config.accessToken,
-        redirect_uri:
-        this.config.redirectURI ||
-        'https://ppacher.github.io/spotify-auth-callback',
-        client_id: this.config.clientID,
-        client_secret: this.config.clientSecret,
-      },
-    }, (err, response, body) => {
-      if (err) {
-        console.error(err);
-        return;
-      }
-      if (response.statusCode !== 200) {
-        console.error(body);
-        return;
-      }
-
-      const data = JSON.parse(body);
-
-      config.accessToken = data.access_token;
-      config.refreshToken = data.refresh_token;
-      config.authorized = true;
-
-      console.log('Client is now authorized');
-
-      db.saveConfig(config);
-
-      this.spotifyApi.setAccessToken(data.access_token);
-      this.spotifyApi.setRefreshToken(data.refresh_token);
-
-      this.updateState();
-    });
-  }
-
-  async refresh(db: Database,
-                config:
-    Record<string, string | boolean | number | Record<string, string>>) {
-    console.log('Refreshing access token');
-
-    const data = await this.spotifyApi.refreshAccessToken();
-
-    console.log(`Refreshed access token, expires in ${data.body.expires_in}`);
-
-    this.spotifyApi.setAccessToken(data.body.access_token);
-    config.accessToken = data.body.access_token;
-
-    db.saveConfig(config);
-    this.updateState();
   }
 
   schedulePolling() {
     const interval = (<number> this.config.interval || 60) * 1000;
+    console.log(`Refreshing state every ${interval} ms`);
     setInterval(() => this.updateState(), interval);
   }
 
@@ -501,11 +376,15 @@ class SpotifyDevice extends Device {
 }
 
 export class SpotifyAdapter extends Adapter {
-  constructor(addonManager: AddonManagerProxy, manifest: Manifest) {
+  constructor(
+    addonManager: AddonManagerProxy,
+    manifest: Manifest,
+    tokenProvider: TokenProvider) {
     super(addonManager, SpotifyAdapter.name, manifest.name);
 
     addonManager.addAdapter(this);
-    const device = new SpotifyDevice(this, manifest);
+    const spotifyApi = tokenProvider.getManagedSpotifyApi();
+    const device = new SpotifyDevice(this, manifest, spotifyApi);
     this.handleDeviceAdded(device);
     device.schedulePolling();
   }

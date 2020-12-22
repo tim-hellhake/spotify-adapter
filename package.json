@@ -20,11 +20,14 @@
   },
   "homepage": "https://github.com/tim-hellhake/spotify-adapter#readme",
   "files": [
+    "css",
+    "js",
     "LICENSE",
     "SHA256SUMS",
     "manifest.json",
     "lib/index.js",
-    "lib/spotify-adapter.js"
+    "lib/spotify-adapter.js",
+    "views"
   ],
   "dependencies": {
     "mkdirp": "^1.0.4",

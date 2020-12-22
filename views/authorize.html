@@ -1,0 +1,24 @@
+<div id="extension-spotify-adapter-content">
+  <h1>Spotify authorization</h1>
+  <ol>
+    <li>Go to the <a href="https://developer.spotify.com/dashboard/applications">spotify applications dashboard</a>
+    </li>
+    <li>Log in</li>
+    <li>Create a new app</li>
+    <li>Set the redirect uri to <div id="extension-spotify-adapter-redirect-info"></div>
+    </li>
+    <li>Enter client id and client secret here</li>
+    <li>Click on "Confirm"</li>
+    <li>You will be redirected to spotify</li>
+    <li>Grant the gateway access</li>
+    <li>You will be redirected back to the gateway</li>
+  </ol>
+  <label for="client-id">Client ID: </label>
+  <input type="text" name="client-id" id="extension-spotify-adapter-form-client-id" required>
+  <br>
+  <label for="client-secret">Client secret: </label>
+  <input type="text" name="client-secret" id="extension-spotify-adapter-form-client-secret" required>
+  <br>
+  <button type="button" class="extension-spotify-adapter-button"
+    id="extension-spotify-adapter-authorize-button">Authorize</button>
+</div>
