@@ -16,8 +16,6 @@ import {
 
 import SpotifyWebApi from 'spotify-web-api-node';
 
-import {homedir} from 'os';
-
 import {join} from 'path';
 
 import mkdirp from 'mkdirp';
@@ -62,7 +60,6 @@ class SpotifyProperty<T extends PropertyValue> extends Property<T> {
   }
 }
 
-const MEDIA_DIR = 'media';
 const ADAPTER_DIR = 'spotify';
 const ALBUM_FILE_NAME = 'album.jpg';
 
@@ -117,9 +114,9 @@ class SpotifyDevice extends Device {
       this.callOpts.device_id = <string> this.config.deviceID;
     }
 
-    const baseDir =
-    process.env.MOZIOT_HOME || join(homedir(), '.mozilla-iot') || '';
-    this.mediaPath = join(baseDir, MEDIA_DIR, ADAPTER_DIR);
+    this.mediaPath = join(
+      this.getAdapter().getUserProfile()?.mediaDir ?? '',
+      ADAPTER_DIR);
 
     this.initStateProperty();
     this.initAlbumDirectory();
@@ -205,9 +202,8 @@ class SpotifyDevice extends Device {
   }
 
   async initAlbumDirectory() {
-    console.log(
-      `Creating media directory ${join(this.mediaPath, this.getId())}`);
-    await mkdirp(join(this.mediaPath, this.getId()));
+    console.log(`Creating media directory ${this.mediaPath}`);
+    await mkdirp(this.mediaPath);
   }
 
   initPlaybackProperties() {
@@ -221,7 +217,7 @@ class SpotifyDevice extends Device {
           {
             mediaType: 'image/jpeg',
             href:
-            `/${MEDIA_DIR}/${ADAPTER_DIR}/${this.getId()}/${ALBUM_FILE_NAME}`,
+            `/media/${ADAPTER_DIR}/${ALBUM_FILE_NAME}`,
             rel: 'alternate',
           },
         ],
@@ -303,7 +299,7 @@ class SpotifyDevice extends Device {
   }
 
   async updateAlbumCoverProperty(url: string) {
-    const coverFilePath = join(this.mediaPath, this.getId(), ALBUM_FILE_NAME);
+    const coverFilePath = join(this.mediaPath, ALBUM_FILE_NAME);
 
     if (url != this.lastAlbumUrl) {
       const response = await fetch(url);
