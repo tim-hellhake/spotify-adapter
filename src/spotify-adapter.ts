@@ -360,15 +360,16 @@ class SpotifyDevice extends Device {
 
   async performAction(action: Action)
     : Promise<void> {
+    const name = action.asDict().name;
     action.start();
 
-    const spotifyAction = this.spotifyActions[action.asDict.name];
+    const spotifyAction = this.spotifyActions[name];
 
     if (spotifyAction) {
-      console.log(`Execute ${action.asDict.name} action`);
+      console.log(`Execute ${name} action`);
       spotifyAction();
     } else {
-      console.warn(`Unknown action ${action}`);
+      console.warn(`Unknown action ${name}`);
     }
 
     action.finish();
