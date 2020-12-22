@@ -32,13 +32,11 @@
   "dependencies": {
     "mkdirp": "^1.0.4",
     "node-fetch": "^2.6.1",
-    "request": "^2.88.2",
     "spotify-web-api-node": "^5.0.0"
   },
   "devDependencies": {
     "@types/mkdirp": "^1.0.1",
     "@types/node-fetch": "^2.5.7",
-    "@types/request": "^2.48.5",
     "@types/spotify-web-api-node": "^4.0.2",
     "@types/ws": "^7.4.0",
     "@typescript-eslint/eslint-plugin": "^4.11.0",
