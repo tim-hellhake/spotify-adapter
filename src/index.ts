@@ -14,7 +14,11 @@ import {TokenProvider} from './token-provider';
 export = async function(addonManager: AddonManagerProxy, manifest: Manifest)
 : Promise<void> {
   const tokenProvider = new TokenProvider();
-  await tokenProvider.init();
+  try {
+    await tokenProvider.init();
+  } catch (e) {
+    console.warn(`Could not initialize token provider: ${e}`);
+  }
   new SpotifyAdapter(addonManager, manifest, tokenProvider);
   new SpotifyApiHandler(addonManager, tokenProvider);
 }
