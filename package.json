@@ -33,7 +33,7 @@
   ],
   "dependencies": {
     "mkdirp": "^1.0.4",
-    "node-fetch": "^2.6.1",
+    "node-fetch": "^2.6.7",
     "spotify-web-api-node": "^5.0.0"
   },
   "devDependencies": {
